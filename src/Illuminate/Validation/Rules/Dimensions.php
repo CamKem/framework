@@ -6,8 +6,8 @@ use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\Rule;
 use Illuminate\Contracts\Validation\ValidatorAwareRule;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Conditionable;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Testing\Exceptions\InvalidArgumentException;
@@ -136,6 +136,22 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
     protected $customRules = [];
 
     /**
+     * Create a new dimensions rule instance.
+     *
+     * @param  array  $constraints
+     * @return void
+     */
+    public function __construct(array $constraints = [])
+    {
+        foreach ($constraints as $key => $value) {
+            $key = Str::camel($key);
+            if (method_exists($this, $key)) {
+                $this->{$key}($value);
+            }
+        }
+    }
+
+    /**
      * Set the "width" constraint.
      *
      * @param  int  $value
@@ -195,7 +211,7 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
      */
     public function maxWidth($value)
     {
-        $this->maxWidth =$value;
+        $this->maxWidth = $value;
 
         return $this;
     }
@@ -216,9 +232,9 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
     /**
      * Set the width between constraint.
      *
-     * @param   int  $min
-     * @param   int  $max
-     * @return  $this
+     * @param  int  $min
+     * @param  int  $max
+     * @return $this
      */
     public function widthBetween($min, $max)
     {
@@ -232,7 +248,7 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
      *
      * @param  int  $min
      * @param  int  $max
-     * @return  $this
+     * @return $this
      */
     public function heightBetween($min, $max)
     {
@@ -302,19 +318,27 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
     protected function buildValidationRules()
     {
         $rules = [];
-        $conditions = ['width', 'height', 'ratio'];
 
-        foreach (get_object_vars($this) as $property => $value) {
-            if ($value !== null && Str::contains($property, $conditions, true) ) {
+        $validationRules = [
+            'width', 'minWidth', 'maxWidth', 'widthBetween',
+            'height', 'minHeight', 'maxHeight', 'heightBetween',
+            'ratio', 'minRatio', 'maxRatio', 'ratioBetween',
+        ];
+
+        foreach ($validationRules as $property) {
+            if ($this->{$property} !== null) {
+                $value = $this->{$property};
+
                 if (is_array($value)) {
                     $value = implode(',', $value);
                 }
-                $rule = Str::snake($property);
-                $rules[] = "{$rule}:{$value}";
+
+                $ruleName = Str::snake($property);
+                $rules[] = "{$ruleName}:{$value}";
             }
         }
 
-        return array_merge(array_filter($rules), $this->customRules);
+        return array_merge($rules, $this->customRules);
     }
 
     /**
@@ -399,7 +423,7 @@ class Dimensions implements Rule, DataAwareRule, ValidatorAwareRule
     protected function fail($messages)
     {
         $messages = collect(Arr::wrap($messages))->map(
-            fn($message) => $this->validator->getTranslator()->get($message)
+            fn ($message) => $this->validator->getTranslator()->get($message)
         )->all();
 
         $this->messages = array_merge($this->messages, $messages);

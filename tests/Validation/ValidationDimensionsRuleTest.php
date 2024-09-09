@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Dimensions;
 use Illuminate\Validation\ValidationServiceProvider;
 use Illuminate\Validation\Validator;
@@ -15,7 +16,6 @@ use PHPUnit\Framework\TestCase;
 
 class ValidationDimensionsRuleTest extends TestCase
 {
-
     public function testWidth()
     {
         $rule = Dimensions::defaults()->width(100);
@@ -124,7 +124,6 @@ class ValidationDimensionsRuleTest extends TestCase
         );
     }
 
-
     public function testMaxHeight()
     {
         $rule = Dimensions::defaults()->maxHeight(100);
@@ -167,14 +166,14 @@ class ValidationDimensionsRuleTest extends TestCase
 
         $this->passes(
             $rule,
-            width:100,
-            height:200,
+            width: 100,
+            height: 200,
         );
 
         $this->fails(
             $rule,
-            width:100,
-            height:100,
+            width: 100,
+            height: 100,
             message: 'validation.ratio'
         );
     }
@@ -185,8 +184,8 @@ class ValidationDimensionsRuleTest extends TestCase
 
         $this->passes(
             $rule,
-            width:100,
-            height:200
+            width: 100,
+            height: 200
         );
 
         $this->fails($rule,
@@ -248,27 +247,51 @@ class ValidationDimensionsRuleTest extends TestCase
             height: 210,
             message: 'validation.dimensions'
         );
-     }
+    }
 
-     public function testCustomRulesAdded()
-     {
-         $this->passes(
-             Dimensions::defaults()
-                 ->width(100)->height(100)
-                 ->rules(['mimes:jpg']),
-             width: 100,
-             height: 100
-         );
+    public function testLegacyConstraintsPassedIntoConstructorViaRuleSupported()
+    {
+        $rule = Rule::dimensions([
+            'min_width' => 100,
+            'max_width' => 200,
+            'min_height' => 100,
+            'max_height' => 200,
+            'ratio' => 1 / 1,
+        ]);
 
-         $this->fails(
-             Dimensions::defaults()
-                 ->width(100)->height(100)
-                 ->rules(['mimes:png']),
-             width: 100,
-             height: 100,
-             message: 'validation.mimes'
-         );
-     }
+        $this->passes(
+            $rule,
+            width: 150,
+            height: 150
+        );
+
+        $this->fails(
+            $rule,
+            width: 190,
+            height: 200,
+            message: 'validation.ratio'
+        );
+    }
+
+    public function testCustomRulesAdded()
+    {
+        $this->passes(
+            Dimensions::defaults()
+                ->width(100)->height(100)
+                ->rules(['mimes:jpg']),
+            width: 100,
+            height: 100
+        );
+
+        $this->fails(
+            Dimensions::defaults()
+                ->width(100)->height(100)
+                ->rules(['mimes:png']),
+            width: 100,
+            height: 100,
+            message: 'validation.mimes'
+        );
+    }
 
     public function testMacroable()
     {
@@ -337,9 +360,7 @@ class ValidationDimensionsRuleTest extends TestCase
         $container = Container::getInstance();
 
         $container->bind('translator', function () {
-            return new Translator(
-                new ArrayLoader, 'en'
-            );
+            return new Translator(new ArrayLoader, 'en');
         });
 
         Facade::setFacadeApplication($container);
