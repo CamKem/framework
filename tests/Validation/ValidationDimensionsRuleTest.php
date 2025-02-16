@@ -339,9 +339,12 @@ class ValidationDimensionsRuleTest extends TestCase
     {
         $values = Arr::wrap($values);
 
+        echo Container::getInstance()->has('translator');
+
         foreach ($values as $value) {
             $v = new Validator(
-                resolve('translator'),
+                Container::getInstance()->make('translator'),
+                //resolve('translator'),
                 ['my_file' => $value],
                 ['my_file' => is_object($rule) ? clone $rule : $rule]
             );
