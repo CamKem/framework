@@ -5,7 +5,7 @@ on:
     branches:
       - master
       - '*.x'
-      - feat/granular-dimension-msgs
+      - 'test/granular-dimension-msgs'
   pull_request:
   schedule:
     - cron: '0 0 * * *'
