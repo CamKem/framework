@@ -1,0 +1,57 @@
+name: Sync Fork with Upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Every Monday at midnight UTC
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    name: Sync branches with laravel/framework
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/laravel/framework.git
+
+      - name: Fetch upstream
+        run: git fetch upstream --tags
+
+      - name: Sync branches
+        run: |
+          BRANCHES=(
+            "4.0" "4.1" "4.2"
+            "5.0" "5.1" "5.2" "5.3" "5.4" "5.5" "5.6" "5.7" "5.8"
+            "6.x" "7.x" "8.x" "9.x" "10.x" "11.x" "12.x" "13.x"
+            "master"
+          )
+
+          for BRANCH in "${BRANCHES[@]}"; do
+            if git ls-remote --exit-code upstream "refs/heads/${BRANCH}" > /dev/null 2>&1; then
+              echo "Syncing branch: ${BRANCH}"
+              git checkout -B "${BRANCH}" "upstream/${BRANCH}"
+              # Force-push to ensure the fork exactly mirrors upstream.
+              # This is intentional — the purpose of this workflow is a full sync.
+              git push origin "${BRANCH}" --force
+            else
+              echo "Branch ${BRANCH} not found in upstream, skipping."
+            fi
+          done
+
+      - name: Sync tags
+        run: git push origin --tags --force
